@@ -147,7 +147,7 @@ Pada bagian ini akan dilakukan beberapa tahap persiapan data, yaitu:
    - **Split data train dan validasi**
      <br>Pada tahap ini dilakukan split data train dan validasi dengan rasio 80:20. Alasannya tahap ini dilakukan adalah untuk mengevaluasi kinerja model Collaborative Filtering secara objektif, penting memiliki data validasi yang tidak digunakan saat pelatihan.
    
-## Modeling and Result
+## Modeling and Results
 Pada tahap ini dilakukan modeling sistem rekomendasi dengan dua pendekatan yaitu Content-Based Filtering dan Collaborative Filtering.
 
 **Kelebihan dan kekurangan pada pendekatan Content-Based Filtering dan Colaborative Filtering**
