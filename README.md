@@ -100,7 +100,7 @@ Proyek ini menggunakan dataset Movie Rating Dataset yang dapat diakses melalui K
      - Terdapat 4 kolom yaitu `userId`, `movieId`, `tag`, dan `timestamp`.
      - Tidak ada missing value dan data duplikat.
    - Jumlah Tag Unik
-     <br>![image](img/tags_unik.png)
+     <br>![image](img/tag_unik.png)
      <br>Output di atas menunjukkan bahwa terdapat 1.589 tag unik pada df_tags.
    - Top 10 Tag yang Paling Sering Muncul
      <br>![tag](img/top10_tag.png)
@@ -126,17 +126,15 @@ Pada bagian ini akan dilakukan beberapa tahap persiapan data, yaitu:
      tags_agg = df_tags.groupby('movieId')['tag'].apply(lambda x: ' '.join(x)).reset_index()
      ```
      Alasan proses ini dilakukan adalah karena tag dari pengguna merepresentasikan deskripsi subjektif tambahan dari sebuah film. Menggabungkannya memungkinkan sistem mengenali karakteristik film secara lebih kaya.
-   - **Menggabungkan df_movies dengan df_tags berdasarkan movieId**
-     <br>Pada tahap ini, dilakukan penggabungan df_movies dengan df_tags menggunakan `merge()`. Alasannya adalah untuk menyatukan informasi genre (dari df_movies) dan tag (dari df_tags) agar dapat digunakan bersama-sama dalam representasi konten. Berikut adalah hasilnya:
+   - **Menggabungkan df_movies dengan tags_agg berdasarkan movieId**
+     <br>Pada tahap ini, dilakukan penggabungan df_movies dengan tags_agg menggunakan `merge()`. Alasannya adalah untuk menyatukan informasi genre (dari df_movies) dan tag (dari tags_agg) agar dapat digunakan dalam representasi konten. Berikut adalah hasilnya:
      <br>![image](img/movies_tags.png)
    - **Menangani missing value pada movies_tags**
-     <br>Pada tahap ini, dilakukan penanganan missing value pada movie_tags. Dimana,  dapat dilihat pada movies_tags bahwa ada beberapa data yang tag nya tidak memiliki nilai (missing value), sehingga perlu ditangani. Pada tahap ini dilakukan imputasi data kosong (missing value) menggunakan nilai default (fillna('')). Metode ini mengisi nilai NaN pada kolom tag hasil merge dengan string kosong ' '. Alasannya adalah untuk menghindari error saat pengolahan teks, seperti ketika membuat representasi vektor konten. Film tanpa tag tetap dapat diproses hanya dengan informasi genre.
+     <br>Pada tahap ini, dilakukan penanganan missing value pada movie_tags. Dimana,  dapat dilihat pada movies_tags bahwa ada beberapa data yang tag nya tidak memiliki nilai (missing value), sehingga perlu ditangani. Pada tahap ini dilakukan imputasi data kosong (missing value) menggunakan nilai default (fillna('')). Metode ini mengisi nilai NaN pada kolom tag hasil merge dengan string kosong. Alasannya adalah untuk menghindari error saat pengolahan teks, seperti ketika membuat representasi vektor konten. Film tanpa tag tetap dapat diproses hanya dengan informasi genre.
      ```python
      # Mengisi missing value dengan string kosong
      movies_tags['tag'] = movies_tags['tag'].fillna('')
      ```
-   - **Memisahkan kolom genres sebagai teks biasa**
-     <br>Pada tahap ini dilakukan data transformation, dari format string dengan delimiter | menjadi format teks biasa (natural text). Dimana kolom genres diubah dari 'Action|Adventure|Fantasy' menjadi 'Action Adventure Fantasy'. Alasannya adalah agar genre dapat diolah oleh model representasi teks seperti TF-IDF, yang mengharapkan teks biasa, bukan string dengan delimiter khusus.
    - **Membuat kolom gabungan antara genres dan tag dengan nama content**
      <br>Pada tahap ini kolom genres dan tag digabung menjadi satu kolom content menggunakan +. Karena kolom content akan digunakan sebagai input untuk proses ekstraksi fitur (TF-IDF) pada Content Based Filtering. Penggabungan ini menciptakan representasi yang lebih lengkap dari konten film. 
      
@@ -225,7 +223,7 @@ Rekomendasi untuk 'Toy Story (1995)':
 Tabel tersebut menampilkan top 10 film yang direkomendasikan berdasarkan kemiripannya dengan Toy Story (1995) dalam hal content (genre dan tag).
 
 ### Model Development dengan Collaborative Filtering
-Sistem ini merekomendasikan film berdasarkan interaksi pengguna dengan item, tanpa melihat kontennya. Menggunakan pendekatan model-based dengan Neural Collaborative Filtering melalui arsitektur RecommenderNet. Model menggunakan embedding layer untuk mewakili user dan movie dalam bentuk vektor berdimensi tetap. Model dilatih menggunakan data rating untuk mempelajari preferensi pengguna terhadap film.
+Sistem ini merekomendasikan film berdasarkan interaksi pengguna dengan item, tanpa melihat kontennya. Menggunakan pendekatan model-based dengan arsitektur RecommenderNet. Model menggunakan embedding layer untuk mewakili user dan movie dalam bentuk vektor berdimensi tetap. Model dilatih menggunakan data rating untuk mempelajari preferensi pengguna terhadap film.
 
 **Parameter**
 - Embedding Size: 50
@@ -263,43 +261,59 @@ Tahapan ini dilakukan cara berikut:
    ```python
    user_id = df_ratings.userId.sample(1).iloc[0]
    ```
-3. Mendapatkan Daftar Film yang Belum Ditonton
+2. Mendapatkan Daftar Film yang Belum Ditonton
    <br>Dengan membandingkan semua movieId di dataset dan film yang sudah ditonton user, diperoleh daftar film yang belum pernah dinilai user tersebut.
    ```python
    unwatched_movie_ids = [mid for mid in all_movie_ids if mid not in movies_watched['movieId'].tolist()]
    ```
-5. Encoding User dan Movie ke Format Model
+3. Encoding User dan Movie ke Format Model
    <br>ID pengguna dan ID film diubah ke bentuk numerik sesuai mapping (user_to_user_encoded, movie_to_movie_encoded) yang telah dibuat sebelumnya.
    ```python
    user_encoded = user_to_user_encoded[user_id]
    movie_encoded_ids = [movie_to_movie_encoded[mid] for mid in unwatched_movie_ids if mid in movie_to_movie_encoded]
    ```
-7. Prediksi Skor dengan Model
+4. Prediksi Skor dengan Model
    <br>Model digunakan untuk memprediksi skor preferensi terhadap semua film yang belum ditonton oleh user. Outputnya adalah array prediksi skor rating.
    ```python
    user_movie_array = np.hstack(([[user_encoded]] * len(movie_encoded_ids),np.array(movie_encoded_ids).reshape(-1, 1)))
    predicted_ratings = model.predict(user_movie_array).flatten()
    ```
-9. Menentukan Top-10 Rekomendasi
+5. Menentukan Top-10 Rekomendasi
    <br>Dari semua hasil prediksi, diambil 10 film dengan skor prediksi tertinggi menggunakan argsort(), lalu ID film hasil prediksi dikonversi kembali ke movieId asli.
    ```python
    top_indices = predicted_ratings.argsort()[-10:][::-1]
    ```
-11. Menampilkan Film yang Direkomendasikan
+6. Mengambil 5 Film Teratas yang disukai Pengguna
+    <br>Informasi title, genres, dan rating dari 5 film teratas yang diberi rating >4.0 oleh user.
+    ```python
+    top_rated_movies = movies_watched[movies_watched['rating'] > 4.0] \
+                    .sort_values(by='rating', ascending=False) \
+                    .merge(df_movies, on='movieId') \
+                    .head(5)
+    ```
+      | No | Title                      | Genres           | Rating |
+      | -- | -------------------------- | ---------------- | ------ |
+      | 1  | Cast Away (2000)           | Drama            | 5.0    |
+      | 2  | Good Will Hunting (1997)   | Drama \| Romance | 5.0    |
+      | 3  | Ted 2 (2015)               | Comedy           | 5.0    |
+      | 4  | The Night Before (2015)    | Comedy           | 5.0    |
+      | 5  | Catch Me If You Can (2002) | Crime \| Drama   | 5.0    |
+
+7. Menampilkan Film yang Direkomendasikan 
     <br>Informasi title dan genres dari 10 film rekomendasi ditampilkan ke user sebagai output akhir sistem rekomendasi. Berikut adalah top 10 rekomendasi film untuk user 365:
 
-      |   ID   | Title                                              | Genres                                  |
-      |--------|----------------------------------------------------|------------------------------------------|
-      |  133   | Congo (1995)                                       | Action, Adventure, Mystery, Sci-Fi       |
-      |  192   | Disclosure (1994)                                  | Drama, Thriller                          |
-      |  384   | Dazed and Confused (1993)                          | Comedy                                   |
-      |  436   | Mrs. Doubtfire (1993)                              | Comedy, Drama                            |
-      |  444   | Piano, The (1993)                                  | Drama, Romance                           |
-      |  594   | Twister (1996)                                     | Action, Adventure, Romance, Thriller     |
-      |  974   | Highlander (1986)                                  | Action, Adventure, Fantasy               |
-      | 2701   | Shanghai Noon (2000)                               | Action, Adventure, Comedy, Western       |
-      | 2743   | For a Few Dollars More (Per qualche dollaro in... | Action, Drama, Thriller, Western         |
-      | 5938   | Wedding Crashers (2005)                            | Comedy, Romance                          |
+      | No | Title                                       | Genres                                                |
+      | -- | ------------------------------------------- | ----------------------------------------------------- |
+      | 1  | Babe (1995)                                 | Children \| Drama                                     |
+      | 2  | Dumb & Dumber (Dumb and Dumber) (1994)      | Adventure \| Comedy                                   |
+      | 3  | Speed (1994)                                | Action \| Romance \| Thriller                         |
+      | 4  | True Lies (1994)                            | Action \| Adventure \| Comedy \| Romance \| Thriller  |
+      | 5  | Nightmare Before Christmas, The (1993)      | Animation \| Children \| Fantasy \| Musical           |
+      | 6  | North by Northwest (1959)                   | Action \| Adventure \| Mystery \| Romance \| Thriller |
+      | 7  | Great Escape, The (1963)                    | Action \| Adventure \| Drama \| War                   |
+      | 8  | Jungle Book, The (1967)                     | Animation \| Children \| Comedy \| Musical            |
+      | 9  | Indiana Jones and the Temple of Doom (1984) | Action \| Adventure \| Fantasy                        |
+      | 10 | Thin Red Line, The (1998)                   | Action \| Drama \| War                                |
 
 
 ## Evaluation
@@ -333,12 +347,13 @@ $$
      - Recall@K: Mengukur kemampuan sistem dalam menemukan semua item relevan milik pengguna dari total yang tersedia.
     
 **Hasil evaluasi**
-- Precision@10: 1.0000
-- Recall@10: 0.0020
+<br>Evaluasi untuk: Toy Story (1995)
+- Precision@10: 0.9000
+- Recall@10: 0.5294
 
 Analisis:
-- Precision@10: 1.0000, menunjukkan bahwa dari 10 film yang direkomendasikan, seluruhnya dianggap relevan berdasarkan kemiripan genre dan tag dengan Toy Story (1995). Ini menunjukkan bahwa sistem sangat tepat dalam memilih film yang relevan.
-- Recall@10: 0.0020, berarti bahwa dari seluruh film yang secara genre dan tag dianggap mirip dengan Toy Story, sistem hanya berhasil menangkap sekitar 0.2% saja. Ini menunjukkan bahwa sistem masih memiliki cakupan (coverage) yang rendah.
+- Precision@10: 0.9000 menunjukkan bahwa dari 10 film yang direkomendasikan, 9 di antaranya dianggap relevan berdasarkan kemiripan genre dan tag dengan Toy Story (1995). Ini menandakan sistem cukup tepat dalam memilih film yang relevan.
+- Recall@10: 0.5294 berarti sistem berhasil menangkap sekitar 52.9% dari seluruh film yang secara genre dan tag mirip dengan Toy Story (1995), menunjukkan cakupan rekomendasi yang cukup baik namun masih bisa ditingkatkan agar lebih banyak film relevan tercover dalam rekomendasi.
 
 ### Evaluasi Collaborative Filtering
 **Metrik yang digunakan**
@@ -374,8 +389,8 @@ Semakin kecil MAE, semakin kecil kesalahan rata-rata model.
 
 **Hasil evaluasi**
 1. RMSE
-- RMSE Train:  0.06599874794483185
-- RMSE Val:  0.20555078983306885
+- RMSE Train: 0.0658
+- RMSE Val: 0.2047
 - Visualisasi
   <br>![rmse](img/rmse.png)
 
@@ -394,8 +409,8 @@ Analisis:
   <br>![rmse](img/mae.png)
 
 Analisis:
-- Train MAE: 0.0503
-- Validation MAE: 0.1576
+- MAE Train: 0.0502
+- MAE Val: 0.1569
 - Grafik menunjukkan bahwa:
   - MAE training juga menurun tajam dan konsisten, mendekati nilai minimum sekitar 0.05.
   - MAE validasi mencapai titik terendah di sekitar epoch ke-2 hingga ke-3, lalu meningkat perlahan, stabil di sekitar 0.157.
@@ -405,18 +420,18 @@ Analisis:
 Proyek ini berhasil membangun dua jenis sistem rekomendasi film, yaitu Content-Based Filtering (CBF) dan Collaborative Filtering (CF), dengan menggunakan Movie Rating Dataset dari Kaggle. Hasil yang diperoleh menunjukkan bahwa kedua pendekatan memiliki keunggulan dan tantangan masing-masing.
 
 **Content-Based Filtering**
-<br>Sistem CBF menggunakan data film berupa genre dan tag untuk menghasilkan rekomendasi berdasarkan kemiripan konten. Dengan pendekatan ini, sistem dapat memberikan rekomendasi yang sangat akurat secara relevansi konten—terbukti dari nilai Precision@10 sebesar 1.0000, yang berarti semua rekomendasi sangat relevan terhadap film input seperti Toy Story (1995). Namun, cakupan sistem masih sangat rendah dengan nilai Recall@10 hanya 0.0020, menunjukkan bahwa hanya sebagian kecil film relevan yang berhasil direkomendasikan. Hal ini menunjukkan bahwa meskipun sistem tepat, variasi rekomendasinya terbatas.
+<br>Sistem CBF menggunakan data film berupa genre dan tag untuk menghasilkan rekomendasi berdasarkan kemiripan konten. Dengan pendekatan ini, sistem dapat memberikan rekomendasi yang sangat akurat secara relevansi konten—terbukti dari nilai Precision@10 sebesar 0.9000, yang berarti 9 dari 10 rekomendasi sangat relevan terhadap film input seperti Toy Story (1995). Sedangkan Recall@10 sebesar 0.5294, menunjukkan cakupan yang masih bisa ditingkatkan. Sistem ini sangat efektif untuk pengguna baru, namun rekomendasinya cenderung terbatas pada histori tontonan pengguna sendiri dan kurang bervariasi.
 
 **Collaborative Filtering**
 <br>Sistem CF menggunakan interaksi pengguna dan film (dalam bentuk rating) untuk mempelajari pola preferensi. Model dibangun dengan pendekatan Neural Collaborative Filtering (NCF) yang memanfaatkan layer embedding dan berhasil mencapai hasil evaluasi yang cukup baik:
-- RMSE pada data validasi: 0.2056
+- RMSE pada data validasi: 0.2047
 - MAE pada data validasi: 0.1576
 
 Nilai-nilai ini menunjukkan bahwa prediksi rating oleh model cukup dekat dengan nilai aktual. Namun, perbedaan mencolok antara metrik pada data training dan validasi menunjukkan indikasi overfitting, di mana model terlalu menyesuaikan diri pada data latih dan kehilangan kemampuan generalisasi terhadap data baru.
 
 **Perbandingan dan Implikasi**
-- CBF cocok untuk pengguna baru atau film baru karena tidak bergantung pada data interaksi historis, tetapi memiliki rekomendasi yang kurang variatif.
-- CF mampu memberikan rekomendasi yang lebih personal dan beragam, tetapi memerlukan data interaksi dalam jumlah besar dan rentan terhadap masalah cold-start.
+- CBF unggul dalam menangani kasus cold-start untuk item baru dan tidak bergantung pada interaksi pengguna lain, namun rekomendasinya cenderung kurang bervariasi dan hanya berdasarkan histori pengguna sendiri.
+- CF menghasilkan rekomendasi yang lebih personal dan variatif karena memanfaatkan pola preferensi pengguna lain, namun memerlukan jumlah data interaksi yang besar dan tidak dapat menangani item/user baru secara efektif.
 
 **Kesimpulan dan Saran**
 <br>Kedua pendekatan memiliki kelebihan dan kekurangan yang saling melengkapi. Untuk pengembangan lebih lanjut, disarankan untuk menggabungkan keduanya dalam pendekatan hybrid recommendation system, agar mampu mengatasi keterbatasan masing-masing metode dan meningkatkan kualitas rekomendasi secara keseluruhan.
