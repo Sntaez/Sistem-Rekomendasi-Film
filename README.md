@@ -254,12 +254,13 @@ history = model.fit(x=x_train, y=y_train,
                     batch_size=32)
 ```
 
-**Top-N Recommendation Content-Based Filtering**
-Tahapan ini dilakukan cara berikut:
-1. Memilih Pengguna Secara Acak
-   <br>Satu pengguna diambil secara acak dari df_ratings untuk menerima rekomendasi personal.
+**Top-N Recommendation Collaborative Filtering**
+<br>Tahapan ini bekerja dengan cara berikut:
+1. Memilih Pengguna
+   <br>Satu pengguna diambil dari df_ratings untuk menerima rekomendasi personal.
    ```python
-   user_id = df_ratings.userId.sample(1).iloc[0]
+   # Untuk memilih satu user
+   user_id = 365
    ```
 2. Mendapatkan Daftar Film yang Belum Ditonton
    <br>Dengan membandingkan semua movieId di dataset dan film yang sudah ditonton user, diperoleh daftar film yang belum pernah dinilai user tersebut.
