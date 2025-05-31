@@ -13,9 +13,9 @@ Keberhasilan penerapan sistem rekomendasi telah dibuktikan dalam praktik industr
 Dengan demikian, penerapan sistem rekomendasi dalam domain film tidak hanya meningkatkan pengalaman pengguna, tetapi juga berdampak langsung terhadap keberhasilan bisnis dan loyalitas pengguna terhadap platform.
 
 ### Referensi
-Gomez-Uribe, C. A., & Hunt, N. (2015). The Netflix recommender system: Algorithms, business value, and innovation. 𝘈𝘊𝘔 𝘛𝘳𝘢𝘯𝘴𝘢𝘤𝘵𝘪𝘰𝘯𝘴 𝘰𝘯 𝘔𝘢𝘯𝘢𝘨𝘦𝘮𝘦𝘯𝘵 𝘐𝘯𝘧𝘰𝘳𝘮𝘢𝘵𝘪𝘰𝘯 𝘚𝘺𝘴𝘵𝘦𝘮𝘴 (𝘛𝘔𝘐𝘚), 6(4), 1–19. [https://doi.org/10.1145/2843948](https://doi.org/10.1145/2843948)
+Gomez-Uribe, C. A., & Hunt, N. (2015). The Netflix recommender system: Algorithms, business value, and innovation. *ACM Transactions on Management Information Systems (TMIS), 6*(4), 1–19. [https://doi.org/10.1145/2843948](https://doi.org/10.1145/2843948)
 
-Bobadilla, J., Ortega, F., Hernando, A., & Gutiérrez, A. (2013). Recommender systems survey. 𝘒𝘯𝘰𝘸𝘭𝘦𝘥𝘨𝘦-𝘉𝘢𝘴𝘦𝘥 𝘚𝘺𝘴𝘵𝘦𝘮𝘴, 46, 109–132. [https://doi.org/10.1016/j.knosys.2013.03.012](https://doi.org/10.1016/j.knosys.2013.03.012)
+Bobadilla, J., Ortega, F., Hernando, A., & Gutiérrez, A. (2013). Recommender systems survey. *Knowledge-Based System, 46*, 109–132. [https://doi.org/10.1016/j.knosys.2013.03.012](https://doi.org/10.1016/j.knosys.2013.03.012)
 
 ## Business Understanding
 ### Problem Statements
@@ -70,6 +70,11 @@ Proyek ini menggunakan dataset Movie Rating Dataset yang dapat diakses melalui K
      <br>![image](https://github.com/user-attachments/assets/c6475f7a-b27f-4159-90f0-b0ec9bdce6c8)
      - Ada 100.836 baris dalam dataset.
      - Terdapat 4 kolom yaitu `userId`, `movieId`, `rating`, dan `timestamp`.
+    - Deskripsi statistik rating
+      <br>![image](https://github.com/user-attachments/assets/c485c007-4280-4b6e-a0a5-fe857c28f9f2)
+      - Terdapat 100.836 rating dalam dataset, yang menunjukkan volume interaksi pengguna dengan film cukup tinggi.
+      - Nilai minimum adalah 0.5, dan maksimum adalah 5.0, yang menunjukkan bahwa pengguna menggunakan seluruh skala rating yang tersedia.
+      - Nilai rata-rata rating adalah 3.50 dari skala 0.5–5.0. Ini menunjukkan bahwa secara umum, pengguna cenderung memberikan penilaian yang positif atau netral terhadap film yang mereka tonton.
     - Distribusi Rating
       <br>![rating](img/distribusi_rating.png)
       <br>Secara keseluruhan, grafik di atas menunjukkan distribusi rating dari yang mana rating terkecil adalah 0.5 dan paling besar 0.5. Rating 4.0 merupakan yang paling sering diberikan, menandakan banyak pengguna cenderung memberi penilaian positif.
@@ -85,6 +90,8 @@ Proyek ini menggunakan dataset Movie Rating Dataset yang dapat diakses melalui K
 3. Data df_tags
    - Informasi df_tags
      <br>![image](https://github.com/user-attachments/assets/17962186-5adc-42c0-8bca-33022d50c329)
+     - Ada 3.683 baris dalam dataset.
+     - Terdapat 4 kolom yaitu `userId`, `movieId`, `tag`, dan `timestamp`.
    - Jumlah Tag Unik
      <br>![image](https://github.com/user-attachments/assets/211c9291-a1c6-4991-9805-d6b291d0e36d)
      <br>Output di atas menunjukkan bahwa terdapat 1.589 tag unik pada df_tags.
@@ -103,34 +110,33 @@ Proyek ini menggunakan dataset Movie Rating Dataset yang dapat diakses melalui K
 
 ## Data Preparation
 Pada bagian ini akan dilakukan beberapa tahap persiapan data, yaitu:
-1. Data Preparation untuk Content Based Filtering
-   - Menghapus data dengan genres = (no genres listed) pada df_movies
+1. **Data Preparation untuk Content Based Filtering**
+   - **Menghapus data dengan genres = (no genres listed) pada df_movies**
      <br>Pada bagian ini, dilakukan penghapusan untuk data yang `genres` nya adalah (no genres listed), karena film yang tidak memiliki genre tidak memberikan informasi berarti untuk sistem rekomendasi, terutama pada metode Content Based Filtering yang mengandalkan deskripsi konten (genre dan tag) untuk menemukan kesamaan antar item (film). Dimana jumlah data dengan genres = '(no genres listed)' adalah 34, sehingga data tersebut lebih baik dihapus. Adapun jumlah data setelah dihapus menjadi 9.708, yang mana sebelumnya adalah 9.742.
-   - Menggabungkan tag berdasarkan movieId
+   - **Menggabungkan tag berdasarkan movieId**
      <br>Pada tahapan ini melakukan group by aggregation pada df_tags berdasarkan movieId, lalu menggabungkan tag menjadi satu string. Setiap tag dari pengguna terhadap satu movieId dikumpulkan dan digabungkan menggunakan metode berikut.<br>
      ```python
      tags_agg = df_tags.groupby('movieId')['tag'].apply(lambda x: ' '.join(x)).reset_index()
      ```
      Alasan proses ini dilakukan adalah karena tag dari pengguna merepresentasikan deskripsi subjektif tambahan dari sebuah film. Menggabungkannya memungkinkan sistem mengenali karakteristik film secara lebih kaya.
-   - Menggabungkan df_movies dengan df_tags berdasarkan movieId
+   - **Menggabungkan df_movies dengan df_tags berdasarkan movieId**
      <br>Pada tahap ini, dilakukan penggabungan df_movies dengan df_tags menggunakan `merge()`. Alasannya adalah untuk menyatukan informasi genre (dari df_movies) dan tag (dari df_tags) agar dapat digunakan bersama-sama dalam representasi konten. Berikut adalah hasilnya:
      <br>![image](https://github.com/user-attachments/assets/1e7e0af2-eeb3-4e61-ad4a-cd45474134e8)
-   - Menangani missing value pada movies_tags
+   - **Menangani missing value pada movies_tags**
      <br>Pada tahap ini, dilakukan penanganan missing value pada movie_tags. Dimana,  dapat dilihat pada movies_tags bahwa ada beberapa data yang tag nya tidak memiliki nilai (missing value), sehingga perlu ditangani. Pada tahap ini dilakukan imputasi data kosong (missing value) menggunakan nilai default (fillna('')). Metode ini mengisi nilai NaN pada kolom tag hasil merge dengan string kosong ' '. Alasannya adalah untuk menghindari error saat pengolahan teks, seperti ketika membuat representasi vektor konten. Film tanpa tag tetap dapat diproses hanya dengan informasi genre.
-   - Memisahkan kolom genres sebagai teks biasa
+   - **Memisahkan kolom genres sebagai teks biasa**
      <br>Pada tahap ini dilakukan data transformation, dari format string dengan delimiter | menjadi format teks biasa (natural text). Dimana kolom genres diubah dari 'Action|Adventure|Fantasy' menjadi 'Action Adventure Fantasy'. Alasannya adalah agar genre dapat diolah oleh model representasi teks seperti TF-IDF, yang mengharapkan teks biasa, bukan string dengan delimiter khusus.
-   - Membuat kolom gabungan antara genres dan tag dengan nama content
+   - **Membuat kolom gabungan antara genres dan tag dengan nama content**
      <br>Pada tahap ini kolom genres dan tag digabung menjadi satu kolom content menggunakan +. Karena kolom content akan digunakan sebagai input untuk proses ekstraksi fitur (TF-IDF) pada Content Based Filtering. Penggabungan ini menciptakan representasi yang lebih lengkap dari konten film. 
      
-3. Data Preparation untuk Collaborative Filtering
-   - Melakukan Encoding pada userId dan movieId
+2. **Data Preparation untuk Collaborative Filtering**
+   - **Melakukan Encoding pada userId dan movieId**
      <br>Pada tahap ini melakukan encoding menggunakan dictionary mapping (dict). Alasannya adalah karena Collaborative Filtering membutuhkan input berupa indeks numerik yang unik untuk setiap pengguna dan film. Dengan representasi indeks ini, model dapat belajar merepresentasikan setiap user dan item sebagai vektor embedding berdimensi tetap
-   - Melakukan normalisasi pada rating
+   - **Melakukan normalisasi pada rating**
      <br>Pada tahap ini, rating dinormalisasi ke rentang 0–1. Alasannya adalah karena normalisasi membantu model memahami preferensi relatif pengguna, dan menghindari bias terhadap pengguna yang cenderung memberikan rating terlalu tinggi atau rendah. Hasil normalisasinya disimpan dalam kolom rating_scaled seperti berikut:
-     <br>
-   - Split data train dan validasi
+     <br>![image](https://github.com/user-attachments/assets/ff683104-a1cb-47c8-9962-ad7c8b73785d)
+   - **Split data train dan validasi**
      <br>Pada tahap ini dilakukan split data train dan validasi dengan rasio 80:20. Alasannya tahap ini dilakukan adalah untuk mengevaluasi kinerja model Collaborative Filtering secara objektif, penting memiliki data validasi yang tidak digunakan saat pelatihan.
    
-
 
 
