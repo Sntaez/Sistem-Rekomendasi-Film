@@ -136,7 +136,25 @@ Pada bagian ini akan dilakukan beberapa tahap persiapan data, yaitu:
      movies_tags['tag'] = movies_tags['tag'].fillna('')
      ```
    - **Membuat kolom gabungan antara genres dan tag dengan nama content**
-     <br>Pada tahap ini kolom genres dan tag digabung menjadi satu kolom content menggunakan +. Karena kolom content akan digunakan sebagai input untuk proses ekstraksi fitur (TF-IDF) pada Content Based Filtering. Penggabungan ini menciptakan representasi yang lebih lengkap dari konten film. 
+     <br>Pada tahap ini kolom genres dan tag digabung menjadi satu kolom content menggunakan +. Karena kolom content akan digunakan sebagai input untuk proses ekstraksi fitur (TF-IDF) pada Content Based Filtering. Penggabungan ini menciptakan representasi yang lebih lengkap dari konten film.
+   - **TF-IDF**
+     <br>Pada tahap ini menggunakan teknik TF-IDF Vectorization untuk mengubah teks (gabungan genre dan tag) menjadi representasi numerik. Dengan paramater yang digunakan yaitu:
+     - stop_words='english': Menghapus kata-kata umum dalam bahasa Inggris agar tidak memengaruhi hasil vektorisasi.
+     - max_df=0.8: Mengabaikan kata-kata yang muncul di lebih dari 80% dokumen karena dianggap terlalu umum.
+     - min_df=2: Hanya mempertahankan kata-kata yang muncul di setidaknya 2 dokumen untuk menghindari kata yang sangat jarang.
+     - ngram_range=(1, 3): Menggunakan unigram, bigram, dan trigram untuk menangkap informasi dari frasa pendek, bukan hanya kata tunggal.
+     - tfidf_matrix = tfidf.fit_transform(movies_tags['content'])
+     ```python
+     # TF-IDF vectorization
+     tfidf = TfidfVectorizer(
+          stop_words='english',
+          max_df=0.8,
+          min_df=2,
+          ngram_range=(1, 3)
+     )
+     
+     tfidf_matrix = tfidf.fit_transform(movies_tags['content'])
+     ```
      
 2. **Data Preparation untuk Collaborative Filtering**
    - **Melakukan Encoding pada userId dan movieId**
@@ -157,23 +175,7 @@ Pada tahap ini dilakukan modeling sistem rekomendasi dengan dua pendekatan yaitu
 | **Collaborative Filtering** | - Menangkap pola preferensi secara implisit <br> - Rekomendasi lebih personal dan variatif <br> - Tidak membutuhkan informasi konten film | - Tidak dapat menangani user atau item baru (cold-start) <br> - Membutuhkan data interaksi yang banyak <br> - Rentan terhadap data sparse |
 
 ### Model Development dengan Content-Based Filtering
-**Parameter**
-- stop_words='english': Menghapus kata-kata umum dalam bahasa Inggris agar tidak memengaruhi hasil vektorisasi.
-- max_df=0.8: Mengabaikan kata-kata yang muncul di lebih dari 80% dokumen karena dianggap terlalu umum.
-- min_df=2: Hanya mempertahankan kata-kata yang muncul di setidaknya 2 dokumen untuk menghindari kata yang sangat jarang.
-- ngram_range=(1, 3): Menggunakan unigram, bigram, dan trigram untuk menangkap informasi dari frasa pendek, bukan hanya kata tunggal.
-
 ```python
-# TF-IDF vectorization
-tfidf = TfidfVectorizer(
-    stop_words='english',
-    max_df=0.8,
-    min_df=2,
-    ngram_range=(1, 3)
-)
-
-tfidf_matrix = tfidf.fit_transform(movies_tags['content'])
-
 # Cosine similarity antar film
 cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
 
@@ -185,7 +187,7 @@ df_sim = pd.DataFrame(cosine_sim, index=movies_tags['title'], columns=movies_tag
 
 df_sim.iloc[:5, :5]  # Contoh similarity antar 5 film pertama
 ```
-Sistem ini merekomendasikan film berdasarkan kemiripan konten antar film, seperti genre dan tag. Menggunakan teknik TF-IDF Vectorization untuk mengubah teks (gabungan genre dan tag) menjadi representasi numerik. Kemudian dilakukan cosine similarity untuk mengukur kemiripan antar film. Hasil similarity disimpan dalam bentuk matriks agar dapat dengan cepat mengambil film yang paling mirip berdasarkan judul input.
+Sistem ini merekomendasikan film berdasarkan kemiripan konten antar film, seperti genre dan tag. Pada tahap ini dilakukan cosine similarity untuk mengukur kemiripan antar film berdasarkan representasi vektor TF-IDF dari informasi konten masing-masing film. Hasil similarity disimpan dalam bentuk matriks agar dapat dengan cepat mengambil film yang paling mirip berdasarkan judul input.
 
 **Top-N Recommendation Content-Based Filtering**
 ```python
@@ -292,6 +294,7 @@ history = model.fit(x=x_train, y=y_train,
                     .merge(df_movies, on='movieId') \
                     .head(5)
     ```
+    <br>Berikut adalah 5 film teratas yang disukai user 365:
       | No | Title                      | Genres           | Rating |
       | -- | -------------------------- | ---------------- | ------ |
       | 1  | Cast Away (2000)           | Drama            | 5.0    |
@@ -303,18 +306,19 @@ history = model.fit(x=x_train, y=y_train,
 7. Menampilkan Film yang Direkomendasikan 
     <br>Informasi title dan genres dari 10 film rekomendasi ditampilkan ke user sebagai output akhir sistem rekomendasi. Berikut adalah top 10 rekomendasi film untuk user 365:
 
-      | No | Title                                       | Genres                                                |
-      | -- | ------------------------------------------- | ----------------------------------------------------- |
-      | 1  | Babe (1995)                                 | Children \| Drama                                     |
-      | 2  | Dumb & Dumber (Dumb and Dumber) (1994)      | Adventure \| Comedy                                   |
-      | 3  | Speed (1994)                                | Action \| Romance \| Thriller                         |
-      | 4  | True Lies (1994)                            | Action \| Adventure \| Comedy \| Romance \| Thriller  |
-      | 5  | Nightmare Before Christmas, The (1993)      | Animation \| Children \| Fantasy \| Musical           |
-      | 6  | North by Northwest (1959)                   | Action \| Adventure \| Mystery \| Romance \| Thriller |
-      | 7  | Great Escape, The (1963)                    | Action \| Adventure \| Drama \| War                   |
-      | 8  | Jungle Book, The (1967)                     | Animation \| Children \| Comedy \| Musical            |
-      | 9  | Indiana Jones and the Temple of Doom (1984) | Action \| Adventure \| Fantasy                        |
-      | 10 | Thin Red Line, The (1998)                   | Action \| Drama \| War                                |
+      | ID   | Title                                              | Genres                                               |
+      | ---- | -------------------------------------------------- | ---------------------------------------------------- |
+      | 192  | Disclosure (1994)                                  | Drama\|Thriller                                      |
+      | 197  | Dumb & Dumber (Dumb and Dumber) (1994)             | Adventure\|Comedy                                    |
+      | 297  | While You Were Sleeping (1995)                     | Comedy\|Romance                                      |
+      | 322  | Lion King, The (1994)                              | Adventure\|Animation\|Children\|Drama\|Musical\|IMAX |
+      | 328  | Naked Gun 33 1/3: The Final Insult (1994)          | Action\|Comedy                                       |
+      | 615  | Independence Day (a.k.a. ID4) (1996)               | Action\|Adventure\|Sci-Fi\|Thriller                  |
+      | 836  | E.T. the Extra-Terrestrial (1982)                  | Children\|Drama\|Sci-Fi                              |
+      | 1154 | Austin Powers: International Man of Mystery (1997) | Action\|Adventure\|Comedy                            |
+      | 2302 | Dogma (1999)                                       | Adventure\|Comedy\|Fantasy                           |
+      | 4867 | 50 First Dates (2004)                              | Comedy\|Romance                                      |
+
 
 
 ## Evaluation
@@ -390,28 +394,28 @@ Semakin kecil MAE, semakin kecil kesalahan rata-rata model.
 
 **Hasil evaluasi**
 1. RMSE
-- RMSE Train: 0.0658
-- RMSE Val: 0.2047
+- RMSE Train: 0.06
+- RMSE Val: 0.20
 - Visualisasi
   <br>![rmse](img/rmse.png)
 
 Analisis:
-- Train RMSE: 0.0659
-- Validation RMSE: 0.2056
+- Train RMSE: 0.06
+- Validation RMSE: 0.20
 - Grafik menunjukkan bahwa:
   - RMSE training menurun konsisten dari awal hingga akhir epoch, menunjukkan bahwa model belajar dengan baik pada data pelatihan.
   - RMSE validasi menurun sedikit hingga sekitar epoch ke-2, kemudian mulai meningkat perlahan setelahnya.
 - Terdapat indikasi overfitting pada model, yang terlihat dari perbedaan antara nilai RMSE training dan RMSE validasi. Nilai RMSE training terus menurun secara konsisten, menandakan model semakin baik dalam mempelajari data pelatihan. Namun, RMSE validasi hanya menurun pada beberapa epoch awal (sekitar epoch ke-2), lalu meningkat perlahan setelahnya. Hal ini menunjukkan bahwa model mulai kehilangan kemampuan generalisasi terhadap data baru, karena terlalu menyesuaikan diri dengan data pelatihan.
 
 2. MAE
-- MAE Train:  0.05029238387942314
-- MAE Val:  0.15763945877552032
+- MAE Train:  0.05
+- MAE Val:  0.15
 - Visualisasi
   <br>![rmse](img/mae.png)
 
 Analisis:
-- MAE Train: 0.0502
-- MAE Val: 0.1569
+- MAE Train: 0.05
+- MAE Val: 0.15
 - Grafik menunjukkan bahwa:
   - MAE training juga menurun tajam dan konsisten, mendekati nilai minimum sekitar 0.05.
   - MAE validasi mencapai titik terendah di sekitar epoch ke-2 hingga ke-3, lalu meningkat perlahan, stabil di sekitar 0.157.
@@ -425,8 +429,8 @@ Proyek ini berhasil membangun dua jenis sistem rekomendasi film, yaitu Content-B
 
 **Collaborative Filtering**
 <br>Sistem CF menggunakan interaksi pengguna dan film (dalam bentuk rating) untuk mempelajari pola preferensi. Model dibangun dengan pendekatan Neural Collaborative Filtering (NCF) yang memanfaatkan layer embedding dan berhasil mencapai hasil evaluasi yang cukup baik:
-- RMSE pada data validasi: 0.2047
-- MAE pada data validasi: 0.1576
+- RMSE pada data validasi: 0.20
+- MAE pada data validasi: 0.15
 
 Nilai-nilai ini menunjukkan bahwa prediksi rating oleh model cukup dekat dengan nilai aktual. Namun, perbedaan mencolok antara metrik pada data training dan validasi menunjukkan indikasi overfitting, di mana model terlalu menyesuaikan diri pada data latih dan kehilangan kemampuan generalisasi terhadap data baru.
 
