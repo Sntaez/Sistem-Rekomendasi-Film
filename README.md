@@ -138,7 +138,7 @@ Pada bagian ini akan dilakukan beberapa tahap persiapan data, yaitu:
    - **Membuat kolom gabungan antara genres dan tag dengan nama content**
      <br>Pada tahap ini kolom genres dan tag digabung menjadi satu kolom content menggunakan +. Karena kolom content akan digunakan sebagai input untuk proses ekstraksi fitur (TF-IDF) pada Content Based Filtering. Penggabungan ini menciptakan representasi yang lebih lengkap dari konten film.
    - **TF-IDF**
-     <br>Pada tahap ini menggunakan teknik TF-IDF Vectorization untuk mengubah teks (gabungan genre dan tag) menjadi representasi numerik. Dengan paramater yang digunakan yaitu:
+     <br>Pada tahap ini menggunakan teknik TF-IDF Vectorization untuk mengubah teks (gabungan genre dan tag) menjadi representasi numerik. Tahap ini dilakukan agar sistem dapat memahami dan membandingkan kemiripan antar film berdasarkan informasi kontennya dalam bentuk numerik yang bisa diolah oleh algoritma. Dengan paramater yang digunakan yaitu:
      - stop_words='english': Menghapus kata-kata umum dalam bahasa Inggris agar tidak memengaruhi hasil vektorisasi.
      - max_df=0.8: Mengabaikan kata-kata yang muncul di lebih dari 80% dokumen karena dianggap terlalu umum.
      - min_df=2: Hanya mempertahankan kata-kata yang muncul di setidaknya 2 dokumen untuk menghindari kata yang sangat jarang.
